@@ -1,0 +1,7 @@
+{
+  "name": "Point & Solve AI",
+  "description": "An advanced AI-powered homework assistant that helps students solve math, science, and linguistics problems using their camera. Features include step-by-step solutions, chat follow-ups, and study tracking.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
