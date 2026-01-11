@@ -10,6 +10,9 @@ interface HistoryProps {
 const History: React.FC<HistoryProps> = ({ history }) => {
   const navigate = useNavigate();
 
+  // Get unique topics for filter chips
+  const topics = ['All', ...new Set(history.map(s => s.topic))];
+
   return (
     <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark pb-20">
       <header className="sticky top-0 z-20 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 p-4 flex items-center justify-between">
@@ -29,7 +32,7 @@ const History: React.FC<HistoryProps> = ({ history }) => {
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar py-2">
-          {['All', 'Math', 'Physics', 'Chemistry', 'Linguistics'].map((c, i) => (
+          {topics.map((c, i) => (
             <button key={c} className={`px-6 h-9 rounded-full text-sm font-semibold whitespace-nowrap ${i === 0 ? 'bg-primary text-white shadow-md' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700'}`}>
               {c}
             </button>
@@ -46,7 +49,11 @@ const History: React.FC<HistoryProps> = ({ history }) => {
           ) : (
             <div className="space-y-3">
               {history.map(item => (
-                <div key={item.id} className="flex items-center gap-4 bg-white dark:bg-slate-800 p-3 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+                <div
+                  key={item.id}
+                  onClick={() => navigate('/solution')}
+                  className="flex items-center gap-4 bg-white dark:bg-slate-800 p-3 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 cursor-pointer hover:bg-slate-50 transition-colors"
+                >
                   <div className="size-16 rounded-lg bg-cover bg-center border border-slate-100 dark:border-slate-700 shrink-0" style={{ backgroundImage: `url(${item.captureUrl})` }}></div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold truncate">{item.topic} - {item.subtopic}</p>

@@ -1,9 +1,30 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getLeaderboard } from '../services/databaseService';
+import { useAuth } from '../context/AuthContext';
+import { LeaderboardEntry } from '../types';
 
 const Leaderboard: React.FC = () => {
   const navigate = useNavigate();
+  const { profile } = useAuth();
+  const [leaders, setLeaders] = useState<LeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<'friends' | 'global'>('global');
+
+  useEffect(() => {
+    const fetchLeaderboard = async () => {
+      setLoading(true);
+      const data = await getLeaderboard(20);
+      setLeaders(data);
+      setLoading(false);
+    };
+    fetchLeaderboard();
+  }, []);
+
+  const top3 = leaders.slice(0, 3);
+  const rest = leaders.slice(3);
+  const userRank = leaders.find(l => l.id === profile?.id);
 
   return (
     <div className="flex flex-col min-h-screen bg-background-light dark:bg-[#101622] pb-32">
@@ -19,60 +40,72 @@ const Leaderboard: React.FC = () => {
 
       <div className="px-4 py-4">
         <div className="bg-gray-100 dark:bg-gray-800 p-1 rounded-full flex relative">
-          <button className="flex-1 py-2 text-sm font-bold bg-white dark:bg-primary rounded-full shadow-sm z-10">Friends</button>
-          <button className="flex-1 py-2 text-sm font-medium text-gray-500">Global</button>
+          <button
+            onClick={() => setTab('friends')}
+            className={`flex-1 py-2 text-sm font-bold rounded-full ${tab === 'friends' ? 'bg-white dark:bg-primary shadow-sm' : ''}`}
+          >
+            Friends
+          </button>
+          <button
+            onClick={() => setTab('global')}
+            className={`flex-1 py-2 text-sm font-medium ${tab === 'global' ? 'bg-white dark:bg-primary rounded-full shadow-sm' : 'text-gray-500'}`}
+          >
+            Global
+          </button>
         </div>
       </div>
 
-      <div className="flex justify-center items-end gap-2 px-6 pt-12 pb-6 bg-gradient-to-b from-primary/10 to-transparent">
-        <Top3 
-          rank={2} 
-          name="Leo Dash" 
-          pts="2,450" 
-          color="silver" 
-          avatar="https://picsum.photos/seed/leo/150/150" 
-        />
-        <Top3 
-          rank={1} 
-          name="Sarah K." 
-          pts="3,120" 
-          color="gold" 
-          featured 
-          avatar="https://picsum.photos/seed/sarah/200/200" 
-        />
-        <Top3 
-          rank={3} 
-          name="Minh H." 
-          pts="2,100" 
-          color="bronze" 
-          avatar="https://picsum.photos/seed/minh/150/150" 
-        />
-      </div>
-
-      <div className="flex-1 bg-white dark:bg-[#101622] rounded-t-[2.5rem] mt-[-20px] z-10 px-6 pt-8 pb-32 space-y-4">
-        <ListItem rank={4} name="Jamie Watson" streak="12 days" pts="1,890" />
-        <ListItem rank={5} name="Alex Johnson" accuracy="92%" pts="1,745" active />
-        <ListItem rank={6} name="Maya Rodriguez" streak="5 days" pts="1,520" />
-        <ListItem rank={7} name="Chris Lee" streak="8 days" pts="1,410" />
-        <ListItem rank={8} name="Sophia Chen" streak="20 days" pts="1,385" />
-      </div>
-
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md p-4 z-30">
-        <div className="bg-primary text-white rounded-2xl p-4 shadow-xl flex items-center gap-4">
-          <div className="text-center">
-            <p className="text-[8px] font-black uppercase opacity-80">Rank</p>
-            <p className="text-xl font-bold">#5</p>
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span>
+        </div>
+      ) : (
+        <>
+          <div className="flex justify-center items-end gap-2 px-6 pt-12 pb-6 bg-gradient-to-b from-primary/10 to-transparent">
+            {top3[1] && <Top3 rank={2} name={top3[1].username || 'User'} pts={String(top3[1].points)} color="silver" avatar={top3[1].avatar_url || `https://picsum.photos/seed/${top3[1].id}/150/150`} />}
+            {top3[0] && <Top3 rank={1} name={top3[0].username || 'User'} pts={String(top3[0].points)} color="gold" featured avatar={top3[0].avatar_url || `https://picsum.photos/seed/${top3[0].id}/200/200`} />}
+            {top3[2] && <Top3 rank={3} name={top3[2].username || 'User'} pts={String(top3[2].points)} color="bronze" avatar={top3[2].avatar_url || `https://picsum.photos/seed/${top3[2].id}/150/150`} />}
           </div>
-          <div className="h-10 w-px bg-white/20"></div>
-          <div className="flex-1">
-            <p className="text-sm font-bold">Keep it up, Alex!</p>
-            <p className="text-[10px] opacity-80">145 pts to reach #4</p>
+
+          <div className="flex-1 bg-white dark:bg-[#101622] rounded-t-[2.5rem] mt-[-20px] z-10 px-6 pt-8 pb-32 space-y-4">
+            {rest.map(leader => (
+              <ListItem
+                key={leader.id}
+                rank={leader.rank}
+                name={leader.username || 'Anonymous'}
+                streak={`${leader.streak} days`}
+                pts={String(leader.points)}
+                active={leader.id === profile?.id}
+                avatar={leader.avatar_url}
+              />
+            ))}
+            {rest.length === 0 && (
+              <p className="text-center text-gray-400 py-10">No other players yet</p>
+            )}
           </div>
-          <div className="bg-white/20 px-3 py-1.5 rounded-full flex items-center gap-1 font-bold text-sm">
-            1,745 <span className="material-symbols-outlined text-xs fill-1">auto_awesome</span>
+        </>
+      )}
+
+      {userRank && (
+        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md p-4 z-30">
+          <div className="bg-primary text-white rounded-2xl p-4 shadow-xl flex items-center gap-4">
+            <div className="text-center">
+              <p className="text-[8px] font-black uppercase opacity-80">Rank</p>
+              <p className="text-xl font-bold">#{userRank.rank}</p>
+            </div>
+            <div className="h-10 w-px bg-white/20"></div>
+            <div className="flex-1">
+              <p className="text-sm font-bold">Keep it up, {profile?.username || 'Student'}!</p>
+              <p className="text-[10px] opacity-80">
+                {userRank.rank > 1 ? `${leaders[userRank.rank - 2]?.points - userRank.points} pts to reach #${userRank.rank - 1}` : 'You are #1!'}
+              </p>
+            </div>
+            <div className="bg-white/20 px-3 py-1.5 rounded-full flex items-center gap-1 font-bold text-sm">
+              {userRank.points} <span className="material-symbols-outlined text-xs fill-1">auto_awesome</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
@@ -101,11 +134,11 @@ const Top3: React.FC<{ rank: number, name: string, pts: string, color: 'gold' | 
   );
 };
 
-const ListItem: React.FC<{ rank: number, name: string, streak?: string, accuracy?: string, pts: string, active?: boolean }> = ({ rank, name, streak, accuracy, pts, active }) => (
+const ListItem: React.FC<{ rank: number, name: string, streak?: string, accuracy?: string, pts: string, active?: boolean, avatar?: string }> = ({ rank, name, streak, accuracy, pts, active, avatar }) => (
   <div className={`flex items-center gap-4 p-3 rounded-2xl transition-all ${active ? 'bg-primary/10 border border-primary/20 ring-1 ring-primary/5' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>
     <span className={`w-6 text-sm font-black ${active ? 'text-primary' : 'text-gray-300'}`}>{rank}</span>
     <div className="relative">
-      <div className={`size-10 rounded-full bg-cover bg-center ${active ? 'border-2 border-primary shadow-sm' : 'border border-gray-100 dark:border-gray-800'}`} style={{ backgroundImage: `url(https://picsum.photos/seed/${name}/100/100)` }}></div>
+      <div className={`size-10 rounded-full bg-cover bg-center ${active ? 'border-2 border-primary shadow-sm' : 'border border-gray-100 dark:border-gray-800'}`} style={{ backgroundImage: `url(${avatar || `https://picsum.photos/seed/${name}/100/100`})` }}></div>
       {active && <div className="absolute -top-1 -right-1 bg-primary text-white p-0.5 rounded-full ring-2 ring-white dark:ring-[#101622]"><span className="material-symbols-outlined text-[10px] block">person</span></div>}
     </div>
     <div className="flex-1 min-w-0">
@@ -113,7 +146,7 @@ const ListItem: React.FC<{ rank: number, name: string, streak?: string, accuracy
         {name} {active && <span className="text-[8px] font-black bg-primary text-white px-1.5 py-0.5 rounded ml-1 uppercase">You</span>}
       </p>
       <p className="text-[10px] text-gray-400 font-medium">
-        {streak ? `Streak: ${streak}` : `Accuracy: ${accuracy}`}
+        {streak ? `Streak: ${streak}` : accuracy ? `Accuracy: ${accuracy}` : ''}
       </p>
     </div>
     <div className="flex items-center gap-1 font-bold">

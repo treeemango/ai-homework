@@ -1,9 +1,41 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { getUserAchievements, getAllAchievements } from '../services/databaseService';
+import { Achievement } from '../types';
 
 const TrophyRoom: React.FC = () => {
   const navigate = useNavigate();
+  const { profile, stats } = useAuth();
+  const [allAchievements, setAllAchievements] = useState<Achievement[]>([]);
+  const [unlockedIds, setUnlockedIds] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (profile?.id) {
+        const [all, user] = await Promise.all([
+          getAllAchievements(),
+          getUserAchievements(profile.id)
+        ]);
+        setAllAchievements(all);
+        setUnlockedIds(user.map((ua: any) => ua.achievements?.id || ''));
+      }
+      setLoading(false);
+    };
+    fetchData();
+  }, [profile?.id]);
+
+  const unlockedCount = unlockedIds.length;
+  const totalCount = allAchievements.length || 40;
+  const points = profile?.points || 0;
+  const nextLevel = Math.ceil(points / 500) * 500;
+  const progress = totalCount > 0 ? (points % 500) / 5 : 0;
+
+  const recentUnlocks = allAchievements
+    .filter(a => unlockedIds.includes(a.id))
+    .slice(0, 2);
 
   return (
     <div className="flex flex-col min-h-screen bg-[#221e10] text-white pb-32">
@@ -19,33 +51,39 @@ const TrophyRoom: React.FC = () => {
 
       <main className="p-4 space-y-8">
         <div className="rounded-2xl shadow-xl bg-[#342d18] border border-amber-400/20 overflow-hidden">
-          <div 
+          <div
             className="w-full aspect-[16/7] bg-cover bg-center relative"
             style={{ backgroundImage: `linear-gradient(to bottom, transparent, #342d18), url(https://picsum.photos/seed/trophy/800/400)` }}
           >
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="bg-amber-400/20 backdrop-blur-md px-6 py-2 rounded-full border border-amber-400/40">
-                <span className="text-amber-400 font-black text-xs tracking-widest uppercase">Rank: Gold Scholar</span>
+                <span className="text-amber-400 font-black text-xs tracking-widest uppercase">
+                  Rank: {points >= 1000 ? 'Gold Scholar' : points >= 500 ? 'Silver Scholar' : 'Bronze Scholar'}
+                </span>
               </div>
             </div>
           </div>
           <div className="p-5 space-y-4">
             <div className="flex justify-between items-center">
-              <p className="text-2xl font-black">12/40 Badges</p>
-              <span className="text-[10px] font-black text-amber-400 bg-amber-400/10 px-2 py-1 rounded">TOP 5%</span>
+              <p className="text-2xl font-black">{unlockedCount}/{totalCount} Badges</p>
+              {unlockedCount > totalCount * 0.25 && (
+                <span className="text-[10px] font-black text-amber-400 bg-amber-400/10 px-2 py-1 rounded">
+                  TOP {Math.round((1 - unlockedCount / totalCount) * 100)}%
+                </span>
+              )}
             </div>
             <div className="space-y-2">
               <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-amber-200/50">
-                <span>Points to Level 6</span>
-                <span>450 / 500 XP</span>
+                <span>Points to Next Level</span>
+                <span>{points} / {nextLevel} XP</span>
               </div>
               <div className="h-3 bg-amber-900/40 rounded-full overflow-hidden">
-                <div className="bg-amber-400 h-full shadow-[0_0_10px_rgba(251,191,36,0.5)] w-[90%] transition-all duration-1000"></div>
+                <div className="bg-amber-400 h-full shadow-[0_0_10px_rgba(251,191,36,0.5)] transition-all duration-1000" style={{ width: `${progress}%` }}></div>
               </div>
             </div>
             <div className="flex items-center justify-between mt-4">
-              <p className="text-[10px] italic text-amber-200/50">50 XP away from "The Sage" title</p>
-              <button 
+              <p className="text-[10px] italic text-amber-200/50">{nextLevel - points} XP to next level</p>
+              <button
                 onClick={() => navigate('/leaderboard')}
                 className="px-6 h-10 bg-amber-400 text-[#221e10] rounded-full font-bold text-sm active:scale-95 transition-transform"
               >
@@ -61,20 +99,34 @@ const TrophyRoom: React.FC = () => {
             <span className="text-amber-400 text-xs font-bold underline underline-offset-4">View All</span>
           </div>
           <div className="grid grid-cols-3 gap-6">
-            <AchievementBadge icon="calculate" label="Math Whiz" unlocked />
-            <AchievementBadge icon="camera_enhance" label="Lens Master" unlocked />
-            <AchievementBadge icon="local_fire_department" label="7-Day Streak" unlocked />
-            <AchievementBadge icon="history_edu" label="Historian" />
-            <AchievementBadge icon="science" label="Lab Pro" />
-            <AchievementBadge icon="nightlight" label="Night Owl" />
+            {allAchievements.slice(0, 6).map(achievement => (
+              <AchievementBadge
+                key={achievement.id}
+                icon={achievement.icon}
+                label={achievement.name}
+                unlocked={unlockedIds.includes(achievement.id)}
+              />
+            ))}
+            {allAchievements.length === 0 && !loading && (
+              <p className="col-span-3 text-center text-amber-200/50">No achievements available</p>
+            )}
           </div>
         </div>
 
         <div>
           <h3 className="text-lg font-bold mb-4">Recent Unlocks</h3>
           <div className="space-y-3">
-            <RecentCard icon="psychology" title="Critical Thinker" date="Oct 12, 2023" />
-            <RecentCard icon="language" title="Global Linguist" date="Sep 28, 2023" />
+            {recentUnlocks.map(achievement => (
+              <RecentCard
+                key={achievement.id}
+                icon={achievement.icon}
+                title={achievement.name}
+                date="Recently"
+              />
+            ))}
+            {recentUnlocks.length === 0 && (
+              <p className="text-center text-amber-200/50 py-4">No achievements unlocked yet</p>
+            )}
           </div>
         </div>
       </main>

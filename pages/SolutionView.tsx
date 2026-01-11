@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Solution } from '../types';
 import { chatWithSolution } from '../services/geminiService';
+import MarkdownMath from '../components/MarkdownMath';
 
 interface SolutionViewProps {
   solution: Solution | null;
@@ -28,11 +29,32 @@ const SolutionView: React.FC<SolutionViewProps> = ({ solution }) => {
     setIsTyping(true);
 
     try {
-      const geminiHistory = messages.map(m => ({ role: m.role, parts: [{ text: m.content }] }));
-      const response = await chatWithSolution(geminiHistory, userMsg);
-      setMessages(prev => [...prev, { role: 'model', content: response || "I'm not sure, could you rephrase?" }]);
+      const response = await chatWithSolution(messages, userMsg, {
+        topic: solution.topic,
+        subtopic: solution.subtopic,
+        solutionSummary: solution.explanation,
+      });
+      setMessages(prev => [...prev, { role: 'model', content: response.reply || "I'm not sure — could you rephrase?" }]);
     } catch (err) {
-      console.error(err);
+      const anyErr = err as any;
+      if (anyErr?.name === 'QuotaError' || anyErr?.status === 429) {
+        console.warn(anyErr);
+      } else {
+        console.error(err);
+      }
+      if (anyErr?.name === 'QuotaError' || anyErr?.status === 429) {
+        const retry = anyErr?.details?.retry_after_seconds;
+        const remaining = anyErr?.details?.remaining_tokens;
+        const extra =
+          retry != null
+            ? ` Try again in about ${retry}s.`
+            : remaining != null
+              ? ` Remaining tokens: ${remaining}.`
+              : '';
+        setMessages(prev => [...prev, { role: 'model', content: `Quota exceeded.${extra}` }]);
+      } else {
+        setMessages(prev => [...prev, { role: 'model', content: anyErr?.message || "I couldn't reach the tutor service right now. Try again in a moment." }]);
+      }
     } finally {
       setIsTyping(false);
     }
@@ -68,7 +90,7 @@ const SolutionView: React.FC<SolutionViewProps> = ({ solution }) => {
 
         <div>
           <h3 className="text-2xl font-bold mb-1">Step-by-Step Solution</h3>
-          <p className="text-sm text-slate-500">{solution.explanation}</p>
+          <MarkdownMath text={solution.explanation} className="text-sm text-slate-500" />
         </div>
 
         <div className="space-y-6">
@@ -82,12 +104,13 @@ const SolutionView: React.FC<SolutionViewProps> = ({ solution }) => {
               </div>
               <div className="pb-4">
                 <h4 className="font-bold text-base">{step.title}</h4>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                  {step.description}
-                </p>
+                <MarkdownMath
+                  text={step.description}
+                  className="text-sm text-slate-600 dark:text-slate-400 mt-1 leading-relaxed"
+                />
                 {step.math && (
                   <div className="mt-2 p-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded font-mono text-primary text-sm">
-                    {step.math}
+                    <MarkdownMath text={`$$\n${step.math}\n$$`} className="text-primary text-sm" />
                   </div>
                 )}
               </div>
@@ -101,7 +124,10 @@ const SolutionView: React.FC<SolutionViewProps> = ({ solution }) => {
             <div>
               <h4 className="font-bold text-base">Final Result</h4>
               <div className="mt-3 p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900 rounded-xl">
-                <p className="text-emerald-700 dark:text-emerald-400 font-mono text-lg font-bold">{solution.finalResult}</p>
+                <MarkdownMath
+                  text={solution.finalResult}
+                  className="text-emerald-700 dark:text-emerald-400 text-lg font-bold"
+                />
                 <p className="text-emerald-600/60 text-[10px] mt-2 italic">Don't forget the constants if applicable!</p>
               </div>
             </div>
@@ -158,7 +184,7 @@ const SolutionView: React.FC<SolutionViewProps> = ({ solution }) => {
               {messages.map((m, i) => (
                 <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
                   <div className={`max-w-[80%] p-3 text-sm rounded-2xl shadow-sm ${m.role === 'user' ? 'bg-primary text-white rounded-tr-none' : 'bg-gray-100 dark:bg-gray-800 rounded-tl-none'}`}>
-                    {m.content}
+                    <MarkdownMath text={m.content} className="text-sm" />
                   </div>
                 </div>
               ))}

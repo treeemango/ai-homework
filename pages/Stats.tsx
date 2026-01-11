@@ -1,9 +1,37 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { getTopicBreakdown } from '../services/databaseService';
 
 const Stats: React.FC = () => {
   const navigate = useNavigate();
+  const { stats, profile, loading } = useAuth();
+  const [topicData, setTopicData] = useState<{ topic: string, count: number }[]>([]);
+  const [weeklyData, setWeeklyData] = useState([60, 45, 30, 55, 75, 95, 40]); // Will be fetched later
+
+  useEffect(() => {
+    const fetchTopics = async () => {
+      if (profile?.id) {
+        const data = await getTopicBreakdown(profile.id);
+        setTopicData(data.map((d: any) => ({ topic: d.topic, count: d.count })));
+      }
+    };
+    fetchTopics();
+  }, [profile?.id]);
+
+  const problemsSolved = stats?.problemsSolved ?? 0;
+  const streak = stats?.streak ?? 0;
+  const accuracy = stats?.accuracy ?? 0;
+  const studyTime = stats?.studyTime ?? '0h';
+  const masteredTopics = stats?.masteredTopics ?? 0;
+
+  // Calculate topic percentages
+  const totalTopics = topicData.reduce((acc, t) => acc + t.count, 0) || 1;
+  const topicPercentages = topicData.map(t => ({
+    ...t,
+    percentage: Math.round((t.count / totalTopics) * 100)
+  }));
 
   return (
     <div className="flex flex-col min-h-screen bg-background-light dark:bg-[#101622] pb-20">
@@ -24,35 +52,31 @@ const Stats: React.FC = () => {
           </div>
           <div className="flex-1">
             <p className="text-orange-900 dark:text-orange-200 text-xs font-medium uppercase tracking-wider">Current Streak</p>
-            <p className="text-orange-600 dark:text-orange-400 text-2xl font-bold">15 Days</p>
+            <p className="text-orange-600 dark:text-orange-400 text-2xl font-bold">{streak} Days</p>
           </div>
-          <div className="bg-white/50 px-3 py-1 rounded-full text-[10px] font-bold text-orange-700">+FIRE</div>
+          {streak >= 7 && <div className="bg-white/50 px-3 py-1 rounded-full text-[10px] font-bold text-orange-700">+FIRE</div>}
         </div>
 
         <div className="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-5 border border-gray-100 dark:border-gray-700">
           <div className="flex justify-between items-end mb-6">
             <div>
               <p className="text-gray-500 text-sm font-medium">Problems Solved</p>
-              <h3 className="text-3xl font-bold">142</h3>
-              <div className="flex items-center gap-1 mt-1 text-green-500 font-bold text-xs">
-                <span className="material-symbols-outlined text-xs">trending_up</span>
-                <span>+12% vs last week</span>
-              </div>
+              <h3 className="text-3xl font-bold">{problemsSolved}</h3>
             </div>
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Weekly View</span>
           </div>
-          
+
           <div className="grid grid-cols-7 gap-2 items-end h-32">
-            {[60, 45, 30, 55, 75, 95, 40].map((h, i) => (
+            {weeklyData.map((h, i) => (
               <div key={i} className="flex flex-col items-center gap-2 h-full justify-end">
-                <div 
-                  className={`w-full rounded-t-sm relative transition-all duration-1000 ${i === 5 ? 'bg-primary shadow-lg shadow-primary/30' : 'bg-primary/20'}`} 
+                <div
+                  className={`w-full rounded-t-sm relative transition-all duration-1000 ${i === 5 ? 'bg-primary shadow-lg shadow-primary/30' : 'bg-primary/20'}`}
                   style={{ height: `${h}%` }}
                 >
                   {i !== 5 && <div className="absolute inset-x-0 top-0 h-1 bg-primary rounded-t-sm"></div>}
                 </div>
                 <p className={`text-[10px] font-bold ${i === 5 ? 'text-primary' : 'text-gray-400'}`}>
-                  {['M','T','W','T','F','S','S'][i]}
+                  {['M', 'T', 'W', 'T', 'F', 'S', 'S'][i]}
                 </p>
               </div>
             ))}
@@ -62,9 +86,9 @@ const Stats: React.FC = () => {
         <div>
           <h2 className="text-xl font-bold mb-3">Key Metrics</h2>
           <div className="grid grid-cols-3 gap-3">
-            <MetricCard icon="school" label="Mastered" value="12" color="blue" />
-            <MetricCard icon="schedule" label="Study Time" value="24h" color="purple" />
-            <MetricCard icon="verified" label="Accuracy" value="88%" color="emerald" />
+            <MetricCard icon="school" label="Mastered" value={String(masteredTopics)} color="blue" />
+            <MetricCard icon="schedule" label="Study Time" value={studyTime} color="purple" />
+            <MetricCard icon="verified" label="Accuracy" value={`${accuracy}%`} color="emerald" />
           </div>
         </div>
 
@@ -73,9 +97,17 @@ const Stats: React.FC = () => {
           <div className="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-6 flex items-center gap-8">
             <div className="relative size-32">
               <svg className="size-full -rotate-90" viewBox="0 0 36 36">
-                <circle cx="18" cy="18" r="16" fill="none" className="stroke-primary" strokeWidth="4" strokeDasharray="50 100" />
-                <circle cx="18" cy="18" r="16" fill="none" className="stroke-emerald-500" strokeWidth="4" strokeDasharray="30 100" strokeDashoffset="-50" />
-                <circle cx="18" cy="18" r="16" fill="none" className="stroke-amber-500" strokeWidth="4" strokeDasharray="20 100" strokeDashoffset="-80" />
+                {topicPercentages.length > 0 ? (
+                  topicPercentages.map((t, i) => {
+                    const offset = topicPercentages.slice(0, i).reduce((acc, p) => acc + p.percentage, 0);
+                    const colors = ['stroke-primary', 'stroke-emerald-500', 'stroke-amber-500', 'stroke-purple-500'];
+                    return (
+                      <circle key={t.topic} cx="18" cy="18" r="16" fill="none" className={colors[i % colors.length]} strokeWidth="4" strokeDasharray={`${t.percentage} 100`} strokeDashoffset={`-${offset}`} />
+                    );
+                  })
+                ) : (
+                  <circle cx="18" cy="18" r="16" fill="none" className="stroke-gray-300" strokeWidth="4" />
+                )}
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-[10px] text-gray-400 font-bold">Total</span>
@@ -83,9 +115,12 @@ const Stats: React.FC = () => {
               </div>
             </div>
             <div className="flex-1 space-y-3">
-              <LegendItem color="bg-primary" label="Math" value="50%" />
-              <LegendItem color="bg-emerald-500" label="Science" value="30%" />
-              <LegendItem color="bg-amber-500" label="History" value="20%" />
+              {topicPercentages.length > 0 ? topicPercentages.slice(0, 3).map((t, i) => {
+                const colors = ['bg-primary', 'bg-emerald-500', 'bg-amber-500'];
+                return <LegendItem key={t.topic} color={colors[i % colors.length]} label={t.topic} value={`${t.percentage}%`} />;
+              }) : (
+                <p className="text-gray-400 text-sm">No data yet</p>
+              )}
             </div>
           </div>
         </div>

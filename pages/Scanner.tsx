@@ -3,19 +3,20 @@ import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 interface ScannerProps {
-  onCapture: (img: string) => void;
+  onCapture: (img: string, mode: string) => void;
 }
 
 const Scanner: React.FC<ScannerProps> = ({ onCapture }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const [mode, setMode] = useState('Math');
 
   useEffect(() => {
     const startCamera = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: 'environment' } 
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' }
         });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -42,30 +43,63 @@ const Scanner: React.FC<ScannerProps> = ({ onCapture }) => {
       if (ctx) {
         ctx.drawImage(videoRef.current, 0, 0);
         const data = canvas.toDataURL('image/jpeg');
-        onCapture(data);
+        onCapture(data, mode);
         navigate('/crop');
       }
     }
   };
 
+  const handleGalleryClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const imageData = event.target?.result as string;
+        if (imageData) {
+          onCapture(imageData, mode);
+          navigate('/crop');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+    // Reset input so the same file can be selected again
+    e.target.value = '';
+  };
+
   return (
     <div className="relative h-screen bg-black">
+      {/* Hidden file input for gallery */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+
       {/* Top Bar */}
       <div className="absolute top-0 left-0 w-full z-20 flex items-center p-4 justify-between">
-        <button className="text-white size-10 flex items-center justify-center bg-black/20 backdrop-blur-md rounded-full">
+        <button
+          onClick={() => navigate(-1)}
+          className="text-white size-10 flex items-center justify-center bg-black/20 backdrop-blur-md rounded-full"
+        >
           <span className="material-symbols-outlined">close</span>
         </button>
-        <h2 className="text-white text-lg font-bold">Point & Solve</h2>
+        <h2 className="text-white text-lg font-bold">Mwakenya</h2>
         <button onClick={() => navigate('/profile')} className="text-white size-10 flex items-center justify-center bg-black/20 backdrop-blur-md rounded-full">
           <span className="material-symbols-outlined">settings</span>
         </button>
       </div>
 
       {/* Camera Feed */}
-      <video 
-        ref={videoRef} 
-        autoPlay 
-        playsInline 
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
         className="w-full h-full object-cover opacity-80"
       />
 
@@ -90,7 +124,7 @@ const Scanner: React.FC<ScannerProps> = ({ onCapture }) => {
         <div className="w-full bg-gradient-to-t from-black/80 to-transparent pt-10 pb-4">
           <div className="flex justify-center gap-8 px-4">
             {['Homework', 'Math', 'Translate'].map(m => (
-              <button 
+              <button
                 key={m}
                 onClick={() => setMode(m)}
                 className={`pb-2 text-sm font-bold transition-colors ${mode === m ? 'text-white border-b-2 border-primary' : 'text-white/60 border-b-2 border-transparent'}`}
@@ -100,15 +134,18 @@ const Scanner: React.FC<ScannerProps> = ({ onCapture }) => {
             ))}
           </div>
         </div>
-        
+
         <div className="w-full bg-black/60 backdrop-blur-xl border-t border-white/10 p-6 flex items-center justify-around">
-          <button className="size-12 rounded-full bg-white/10 text-white flex items-center justify-center ring-1 ring-white/20">
+          <button
+            onClick={handleGalleryClick}
+            className="size-12 rounded-full bg-white/10 text-white flex items-center justify-center ring-1 ring-white/20 hover:bg-white/20 active:scale-95 transition-all"
+          >
             <span className="material-symbols-outlined">image</span>
           </button>
-          
+
           <div className="relative flex items-center justify-center">
             <div className="absolute size-20 rounded-full border-4 border-primary/40"></div>
-            <button 
+            <button
               onClick={takePhoto}
               className="size-16 rounded-full bg-white text-primary flex items-center justify-center shadow-lg active:scale-90 transition-transform"
             >
@@ -141,3 +178,4 @@ const NavItem: React.FC<{ icon: string, label: string, active?: boolean, onClick
 );
 
 export default Scanner;
+

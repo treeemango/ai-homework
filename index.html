@@ -1,13 +1,18 @@
-
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Point & Solve AI</title>
+    <title>Mwakenya - AI Homework Assistant</title>
+    <meta name="description"
+        content="Mwakenya is your AI-powered homework assistant. Snap a photo of any problem and get instant, step-by-step solutions. Learn smarter, not harder.">
+    <meta name="theme-color" content="#7c3aed">
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link rel="icon" type="image/png" href="/favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
     <script>
         tailwind.config = {
             darkMode: "class",
@@ -32,17 +37,60 @@
         }
     </script>
     <style>
-        body { font-family: 'Lexend', sans-serif; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .scanner-frame { border: 2px solid rgba(255, 255, 255, 0.3); position: relative; }
-        .scanner-corner { position: absolute; width: 24px; height: 24px; border-color: #256af4; border-width: 4px; }
-        .scanner-line { height: 2px; background: linear-gradient(90deg, transparent, #256af4, transparent); box-shadow: 0 0 8px #256af4; animation: scan 2s ease-in-out infinite; }
-        @keyframes scan { 0%, 100% { top: 0; } 50% { top: 100%; } }
-        .hexagon { clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); }
-        .crop-overlay { box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5); }
+        body {
+            font-family: 'Lexend', sans-serif;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .scanner-frame {
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            position: relative;
+        }
+
+        .scanner-corner {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border-color: #256af4;
+            border-width: 4px;
+        }
+
+        .scanner-line {
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #256af4, transparent);
+            box-shadow: 0 0 8px #256af4;
+            animation: scan 2s ease-in-out infinite;
+        }
+
+        @keyframes scan {
+
+            0%,
+            100% {
+                top: 0;
+            }
+
+            50% {
+                top: 100%;
+            }
+        }
+
+        .hexagon {
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+        }
+
+        .crop-overlay {
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+        }
     </style>
-<script type="importmap">
+    <script type="importmap">
 {
   "imports": {
     "react/": "https://esm.sh/react@^19.2.3/",
@@ -54,7 +102,10 @@
 }
 </script>
 </head>
+
 <body class="bg-background-light dark:bg-background-dark text-[#0d121c] dark:text-white antialiased">
     <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
 </body>
+
 </html>
